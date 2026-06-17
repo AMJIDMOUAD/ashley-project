@@ -117,14 +117,13 @@
             <h3>Send me my free audit</h3>
             <p class="sub">Takes 20 seconds. You'll get your report within 24 hours.</p>
 
-            <!-- Sends via SMTP (Gmail) on submit -->
             <form
               method="POST"
-              action="#audit"
+              action="https://formsubmit.co/ash8518@gmail.com"
               data-funnel="optin"
             >
-              <input type="hidden" name="_to" value="ash8518@gmail.com" />
-
+              <input type="hidden" name="_subject" value="New Summit Studio Audit Request" />
+              <input type="hidden" name="_captcha" value="false" />
               <div class="field">
                 <label for="name">Your name</label>
                 <input id="name" name="name" type="text" placeholder="Jordan Rivera" required autocomplete="name" />
