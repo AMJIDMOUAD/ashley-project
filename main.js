@@ -54,27 +54,12 @@
     sticky.style.transition = "transform 0.3s ease";
   }
 
-  /* ---- Client-side validation + SMTP-backed submit ---- */
+  /* ---- Client-side validation + local SMTP server ---- */
   function initForm() {
     var form = document.querySelector('form[data-funnel="optin"]');
     if (!form) return;
-    var btn = form.querySelector('button[type="submit"]');
-    var status = form.querySelector("[data-form-status]");
-    var defaultText = btn ? btn.textContent : "";
-
-    function setStatus(message, type) {
-      if (!status) return;
-      status.textContent = message || "";
-      status.dataset.state = type || "";
-    }
-
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      setStatus("", "");
-
-      // honeypot: if filled, silently drop
-      var hp = form.querySelector('input[name="bot-field"]');
-      if (hp && hp.value) return;
 
       var ok = true;
       form.querySelectorAll("input[required]").forEach(function (input) {
@@ -87,34 +72,29 @@
         return;
       }
 
+      var btn = form.querySelector('button[type="submit"]');
       if (btn) { btn.textContent = "Sending\u2026"; btn.disabled = true; }
 
-      var payload = {};
-      Array.prototype.forEach.call(new FormData(form).entries(), function (entry) {
-        payload[entry[0]] = entry[1];
+      var data = {};
+      form.querySelectorAll("input[name]").forEach(function (input) {
+        data[input.name] = input.value;
       });
 
-      fetch(form.getAttribute("action"), {
+      fetch("/send-audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      })
-        .then(function (res) {
-          return res.json().catch(function () { return {}; }).then(function (data) {
-            if (!res.ok) throw new Error(data.error || "Request failed (status " + res.status + ")");
-            return data;
-          });
-        })
-        .then(function () {
-          form.reset();
-          setStatus("Your audit request was sent. Watch your inbox within 24 hours.", "success");
-        })
-        .catch(function (err) {
-          setStatus(err.message || "Something went wrong. Please try again.", "error");
-        })
-        .finally(function () {
-          if (btn) { btn.textContent = defaultText; btn.disabled = false; }
-        });
+        body: JSON.stringify(data)
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (res.ok) {
+          if (btn) { btn.textContent = "Sent!"; }
+          form.innerHTML = '<div class="center" style="padding:2rem 0"><div class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3>You\u2019re in! Check your email.</h3><p style="color:var(--muted)">Your free audit is on its way within 24 hours.</p></div>';
+        } else {
+          throw new Error(res.error || "Server error");
+        }
+      }).catch(function (err) {
+        if (btn) { btn.textContent = "Send Me the Audit"; btn.disabled = false; }
+        alert("Could not send. Make sure the server is running (powershell -File server.ps1) or email us at ash8518@gmail.com.");
+      });
     });
   }
 
