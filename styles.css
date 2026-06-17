@@ -241,10 +241,7 @@ p { margin: 0 0 1em; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(203,162,58,0.55);} 70% { box-shadow: 0 0 0 8px rgba(203,162,58,0);} 100%{ box-shadow:0 0 0 0 rgba(203,162,58,0);} }
 
 /* ---------- Authority ---------- */
-.authority { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: clamp(2rem, 5vw, 4rem); align-items: center; }
-@media (max-width: 880px) { .authority { grid-template-columns: 1fr; } }
-.authority__photo { aspect-ratio: 4/5; border-radius: var(--radius-lg); background: radial-gradient(circle at 50% 45%, rgba(37,201,121,0.18), rgba(13,40,27,0.92) 62%); display: grid; place-items: center; color: var(--muted); font-size: 0.85rem; text-align: center; padding: 1rem; border: 1px solid var(--line); overflow: hidden; box-shadow: var(--shadow-md); }
-.authority__photo img { width: 100%; height: 100%; object-fit: cover; }
+.authority { max-width: 760px; margin-inline: auto; }
 .signature { font-family: "Cormorant Garamond", serif; font-style: italic; font-size: 1.3rem; color: var(--gold); margin-top: 1.2rem; }
 
 /* ---------- Services ---------- */

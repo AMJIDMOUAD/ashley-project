@@ -7,7 +7,9 @@ function json(statusCode, body) {
     statusCode,
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "no-store"
+      "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type"
     },
     body: JSON.stringify(body)
   };
@@ -50,6 +52,11 @@ function envAny(names) {
 }
 
 exports.handler = async function (event) {
+  // Handle CORS preflight
+  if (event.httpMethod === "OPTIONS") {
+    return json(200, {});
+  }
+
   if (event.httpMethod !== "POST") {
     return json(405, { error: "Method not allowed" });
   }
@@ -75,7 +82,8 @@ exports.handler = async function (event) {
   }
 
   const smtpUser = envAny(["GMAIL_USER", "SMTP_USER", "SMTP_USERNAME"]);
-  const smtpPass = envAny(["GMAIL_APP_PASSWORD", "GMAIL_PASSWORD", "GMAIL_PASS", "SMTP_PASS", "SMTP_PASSWORD"]);
+  // Strip spaces — Gmail app passwords are sometimes stored with spaces for readability
+  const smtpPass = envAny(["GMAIL_APP_PASSWORD", "GMAIL_PASSWORD", "GMAIL_PASS", "SMTP_PASS", "SMTP_PASSWORD"]).replace(/\s+/g, "");
 
   if (!smtpUser || !smtpPass) {
     console.error("Missing Gmail SMTP environment variables.");
@@ -89,6 +97,9 @@ exports.handler = async function (event) {
     auth: {
       user: smtpUser,
       pass: smtpPass
+    },
+    tls: {
+      rejectUnauthorized: true
     }
   });
 
@@ -107,21 +118,46 @@ exports.handler = async function (event) {
       text: [
         "New Summit Studio audit request",
         "",
-        `Name: ${name}`,
-        `Business: ${business}`,
-        `Email: ${email}`,
-        `Phone: ${phone}`,
+        `Name:      ${name}`,
+        `Business:  ${business}`,
+        `Email:     ${email}`,
+        `Phone:     ${phone}`,
         `Submitted: ${submittedAt}`
       ].join("\n"),
       html: `
-        <h2>New Summit Studio audit request</h2>
-        <table cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-family:Arial,sans-serif;">
-          <tr><td><strong>Name</strong></td><td>${escapeHtml(name)}</td></tr>
-          <tr><td><strong>Business</strong></td><td>${escapeHtml(business)}</td></tr>
-          <tr><td><strong>Email</strong></td><td><a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></td></tr>
-          <tr><td><strong>Phone</strong></td><td>${escapeHtml(phone)}</td></tr>
-          <tr><td><strong>Submitted</strong></td><td>${escapeHtml(submittedAt)}</td></tr>
-        </table>
+<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+  <h2 style="color:#061711;border-bottom:2px solid #25C979;padding-bottom:10px;">
+    New Summit Studio Audit Request
+  </h2>
+  <table cellpadding="10" cellspacing="0" style="width:100%;border-collapse:collapse;">
+    <tr style="background:#f5f5f5;">
+      <td style="font-weight:bold;width:120px;">Name</td>
+      <td>${escapeHtml(name)}</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold;">Business</td>
+      <td>${escapeHtml(business)}</td>
+    </tr>
+    <tr style="background:#f5f5f5;">
+      <td style="font-weight:bold;">Email</td>
+      <td><a href="mailto:${escapeHtml(email)}" style="color:#25C979;">${escapeHtml(email)}</a></td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold;">Phone</td>
+      <td>${escapeHtml(phone)}</td>
+    </tr>
+    <tr style="background:#f5f5f5;">
+      <td style="font-weight:bold;">Submitted</td>
+      <td>${escapeHtml(submittedAt)}</td>
+    </tr>
+  </table>
+  <p style="margin-top:20px;color:#666;font-size:13px;">
+    Reply directly to this email to respond to ${escapeHtml(name)}.
+  </p>
+</body>
+</html>
       `
     });
   } catch (error) {
@@ -129,9 +165,10 @@ exports.handler = async function (event) {
       code: error.code,
       command: error.command,
       response: error.response,
-      responseCode: error.responseCode
+      responseCode: error.responseCode,
+      message: error.message
     });
-    return json(502, { error: "Email delivery failed." });
+    return json(502, { error: "Email delivery failed. Please try again or contact us directly." });
   }
 
   return json(200, { ok: true });
