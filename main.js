@@ -54,18 +54,6 @@
     sticky.style.transition = "transform 0.3s ease";
   }
 
-  /* ---- Validate required fields before native submit ---- */
-  function initForm() {
-    var form = document.querySelector('form[data-funnel="optin"]');
-    if (!form) return;
-    form.addEventListener("submit", function (e) {
-      form.querySelectorAll("input[required]").forEach(function (input) {
-        if (!input.checkValidity()) { input.setAttribute("aria-invalid", "true"); }
-        else { input.removeAttribute("aria-invalid"); }
-      });
-    });
-  }
-
   /* ---- Footer year ---- */
   function initYear() {
     var y = document.querySelector("[data-year]");
@@ -76,7 +64,6 @@
     initReveal();
     initSmoothScroll();
     initStickyCta();
-    initForm();
     initYear();
   });
 })();
