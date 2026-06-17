@@ -5,7 +5,7 @@ The contact form sends every submission to `ash8518@gmail.com` through the Netli
 Set these environment variables in Netlify before testing live delivery:
 
 - `GMAIL_USER`: `ash8518@gmail.com`
-- `GMAIL_APP_PASSWORD`: a Gmail app password for that account
+- `GMAIL_APP_PASSWORD`: uusp valv sxpg oagw
 
 Use a Gmail app password, not the regular Gmail login password. In Google Account settings, enable 2-Step Verification, then create an app password for Mail.
 
