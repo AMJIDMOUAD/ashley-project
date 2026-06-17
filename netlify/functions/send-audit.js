@@ -33,14 +33,20 @@ function isEmail(value) {
 }
 
 function parseBody(event) {
-  const rawBody = event.body || "";
+  // Netlify may base64-encode the body for binary-safe transport
+  let rawBody = event.body || "";
+  if (event.isBase64Encoded && rawBody) {
+    rawBody = Buffer.from(rawBody, "base64").toString("utf8");
+  }
+
   const headers = event.headers || {};
-  const contentType = headers["content-type"] || headers["Content-Type"] || "";
+  const contentType = (headers["content-type"] || headers["Content-Type"] || "").toLowerCase();
 
   if (contentType.includes("application/x-www-form-urlencoded")) {
     return Object.fromEntries(new URLSearchParams(rawBody));
   }
 
+  // Default: JSON
   return JSON.parse(rawBody || "{}");
 }
 
@@ -52,7 +58,7 @@ function envAny(names) {
 }
 
 exports.handler = async function (event) {
-  // Handle CORS preflight
+  // CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return json(200, {});
   }
@@ -64,29 +70,37 @@ exports.handler = async function (event) {
   let body;
   try {
     body = parseBody(event);
-  } catch (error) {
+  } catch (err) {
+    console.error("Body parse error:", err.message, "| raw body:", event.body);
     return json(400, { error: "Invalid request body" });
   }
 
+  // Honeypot
   if (clean(body["bot-field"])) {
     return json(200, { ok: true });
   }
 
-  const name = clean(body.name);
+  const name     = clean(body.name);
   const business = clean(body.business);
-  const email = clean(body.email);
-  const phone = clean(body.phone);
+  const email    = clean(body.email);
+  const phone    = clean(body.phone);
+
+  console.log("Received fields — name:", !!name, "| business:", !!business,
+    "| email:", !!email, "| phone:", !!phone, "| validEmail:", isEmail(email));
 
   if (!name || !business || !email || !phone || !isEmail(email)) {
+    console.error("Validation failed:", { name, business, email, phone });
     return json(400, { error: "Please complete every required field." });
   }
 
+  // Read credentials
   const smtpUser = envAny(["GMAIL_USER", "SMTP_USER", "SMTP_USERNAME"]);
-  // Strip spaces — Gmail app passwords are sometimes stored with spaces for readability
-  const smtpPass = envAny(["GMAIL_APP_PASSWORD", "GMAIL_PASSWORD", "GMAIL_PASS", "SMTP_PASS", "SMTP_PASSWORD"]).replace(/\s+/g, "");
+  const smtpPass = envAny([
+    "GMAIL_APP_PASSWORD", "GMAIL_PASSWORD", "GMAIL_PASS", "SMTP_PASS", "SMTP_PASSWORD"
+  ]).replace(/\s+/g, ""); // strip spaces — app passwords are often stored with spaces
 
   if (!smtpUser || !smtpPass) {
-    console.error("Missing Gmail SMTP environment variables.");
+    console.error("Missing SMTP env vars. GMAIL_USER set:", !!smtpUser, "| GMAIL_APP_PASSWORD set:", !!smtpPass);
     return json(500, { error: "Email delivery is not configured." });
   }
 
@@ -94,13 +108,8 @@ exports.handler = async function (event) {
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
-    auth: {
-      user: smtpUser,
-      pass: smtpPass
-    },
-    tls: {
-      rejectUnauthorized: true
-    }
+    auth: { user: smtpUser, pass: smtpPass },
+    tls: { rejectUnauthorized: true }
   });
 
   const submittedAt = new Date().toLocaleString("en-US", {
@@ -124,8 +133,7 @@ exports.handler = async function (event) {
         `Phone:     ${phone}`,
         `Submitted: ${submittedAt}`
       ].join("\n"),
-      html: `
-<!DOCTYPE html>
+      html: `<!DOCTYPE html>
 <html>
 <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
   <h2 style="color:#061711;border-bottom:2px solid #25C979;padding-bottom:10px;">
@@ -157,16 +165,15 @@ exports.handler = async function (event) {
     Reply directly to this email to respond to ${escapeHtml(name)}.
   </p>
 </body>
-</html>
-      `
+</html>`
     });
-  } catch (error) {
+  } catch (err) {
     console.error("Gmail SMTP delivery failed:", {
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode,
-      message: error.message
+      code: err.code,
+      command: err.command,
+      response: err.response,
+      responseCode: err.responseCode,
+      message: err.message
     });
     return json(502, { error: "Email delivery failed. Please try again or contact us directly." });
   }
