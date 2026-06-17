@@ -117,22 +117,12 @@
             <h3>Send me my free audit</h3>
             <p class="sub">Takes 20 seconds. You'll get your report within 24 hours.</p>
 
-            <!--
-              NETLIFY FORMS: this form is wired for Netlify.
-              On submit it POSTs and redirects to thank-you.html (action attr).
-              View submissions in Netlify dashboard → Forms → "audit-request".
-            -->
+            <!-- Submissions are POSTed to the send-audit Netlify Function which delivers via Gmail SMTP. -->
             <form
-              name="audit-request"
               method="POST"
-              netlify-honeypot="bot-field"
               action="/api/send-audit"
               data-funnel="optin"
             >
-              <input type="hidden" name="form-name" value="audit-request" />
-              <p class="field field--hp" aria-hidden="true">
-                <label>Don't fill this out if you're human: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
-              </p>
 
               <div class="field">
                 <label for="name">Your name</label>

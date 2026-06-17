@@ -101,7 +101,7 @@
       })
         .then(function (res) {
           return res.json().catch(function () { return {}; }).then(function (data) {
-            if (!res.ok) throw new Error(data.error || "Your request could not be sent.");
+            if (!res.ok) throw new Error(data.error || "Request failed (status " + res.status + ")");
             return data;
           });
         })
@@ -109,8 +109,8 @@
           form.reset();
           setStatus("Your audit request was sent. Watch your inbox within 24 hours.", "success");
         })
-        .catch(function () {
-          setStatus("Something went wrong sending your request. Please try again in a moment.", "error");
+        .catch(function (err) {
+          setStatus(err.message || "Something went wrong. Please try again.", "error");
         })
         .finally(function () {
           if (btn) { btn.textContent = defaultText; btn.disabled = false; }
