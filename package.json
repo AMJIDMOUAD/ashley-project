@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "test": "node --check netlify/functions/send-audit.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.14"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.36.4"
+  }
+}
